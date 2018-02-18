@@ -1,4 +1,6 @@
-
+/*
+rootoftwo invites Miami residents to add words and phrases used to fine tune and localize the Whithervanes project by participating in free workshops. The workshops are designed for participants 14 and older and provide the opportunity to learn basic physical computing and programming skills for controlling light and motion using microcontrollers, LEDs and motors (no soldering required). Past workshops have included a mix of students, young professionals, and adult learners interested in visual arts, design, technology, and media. The workshops include an artist presentation and facilitated dialogue sessions. The workshops are an essential part of the project’s evolution and inspired the development of the forthcoming Whithervanes Open Hardware Kit.
+*/
 
 // ---STEPPER MOTOR---
 #include <Stepper.h>

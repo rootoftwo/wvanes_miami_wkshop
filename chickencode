@@ -1,0 +1,149 @@
+
+
+// ---STEPPER MOTOR---
+#include <Stepper.h>
+
+const int stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
+
+// initialize the stepper library on pins 8 through 11:
+Stepper myStepper(stepsPerRevolution, 8, 10, 9, 11);
+
+
+// ---LED---
+#define R_PIN 6 // via R to led cathode
+#define G_PIN 5 // via G to led cathode
+#define B_PIN 3 // via B to led cathode
+
+const byte colors[][3] = 
+{
+  {0, 255, 0}, // green
+  {0, 0, 255}, // blue
+  {255, 255, 0}, // yellow
+  {255, 100, 0}, // orange
+  {255, 0, 0}, // red
+};
+byte colorAmount = sizeof(colors)/3;
+
+
+// ---PUSH BUTTONS---
+#define SCROLL_PIN 7 // scroll button
+#define TOGGLE_PIN 2 // on/off button
+
+
+// setup() is called only once, when first starting, before loop() is called
+void setup() 
+{
+  pinMode(R_PIN, OUTPUT);
+  pinMode(G_PIN, OUTPUT);
+  pinMode(B_PIN, OUTPUT);
+
+  pinMode(SCROLL_PIN, INPUT_PULLUP);
+  pinMode(TOGGLE_PIN, INPUT_PULLUP);
+ 
+  myStepper.setSpeed(10); // set the speed in rpm
+  Serial.begin(9600); // initialize the serial port
+}
+
+
+// ---VARIABLES TO STORE THE CURRENT AND PREVIOUS STATE OF OUR DEVICE---
+
+// what "threat" level are we?
+byte currentLevel = 0;
+byte prevLevel = 0;
+
+// are we switched on?
+bool on = false;
+bool wasOn;
+
+// remember what our button state was during the last loop...
+// we could also remember the last, say, 3 loops
+// in order to filter out possible noise / high frequency transitions
+// but just storing one seems to work ok
+bool scrollButtonWasDown = false;
+bool toggleButtonWasDown = false;
+
+
+// loop() is called continuously:
+// when the execution reaches the end of the function, 
+// it starts again at the beginning
+void loop() 
+{
+
+  // ---CHECK FOR BUTTON PRESS ON SCROLL BUTTON--- 
+  
+  bool scrollButtonIsDown = digitalRead(SCROLL_PIN)==LOW;
+  if (scrollButtonIsDown && !scrollButtonWasDown)
+  {
+    // only trigger this during the transition from button being up to button being down
+    currentLevel += 1;
+    if (currentLevel >= colorAmount) // this can also be done with the modulo operator (%)
+      currentLevel = 0;
+  }
+  // remember what happened to use next time through loop
+  scrollButtonWasDown = scrollButtonIsDown; 
+
+
+  // ---CHECK FOR BUTTON PRESS ON TOGGLE BUTTON (ON/OFF BUTTON)---
+  
+  bool toggleButtonIsDown = digitalRead(TOGGLE_PIN)==LOW;
+  if (toggleButtonIsDown && !toggleButtonWasDown)
+  {
+    // only trigger this during the transition from button being up to button being down
+    on = !on;
+  }
+  // remember what happened to use next time through loop
+  toggleButtonWasDown = toggleButtonIsDown;
+
+
+  // ---SET LIGHTS---
+  if (on)
+  {
+    analogWrite(R_PIN, colors[currentLevel][0]);
+    analogWrite(G_PIN, colors[currentLevel][1]);
+    analogWrite(B_PIN, colors[currentLevel][2]);
+  }
+  else
+  {
+    // turn light off
+    analogWrite(R_PIN, 0);
+    analogWrite(G_PIN, 0);
+    analogWrite(B_PIN, 0);
+  }
+
+
+  // ---ROTATE MOTOR---
+  if (on)
+  { 
+    // only spin if our level changed, or we were switched on this loop
+    if (currentLevel != prevLevel || !wasOn)
+    {
+      // do half spins for now, since they are a little slow
+      // note level can be 0-4, so we need to add 1 to spin 1-5 times
+      //myStepper.step(stepsPerRevolution/2 * (currentLevel+1));
+
+      int blinksPerRev = 16;
+      int stepsPerBlink = stepsPerRevolution/2 / blinksPerRev;
+      int blinks = 0;
+      while (blinks < blinksPerRev * (currentLevel+1))
+      {
+        analogWrite(R_PIN, colors[currentLevel][0]);
+        analogWrite(G_PIN, colors[currentLevel][1]);
+        analogWrite(B_PIN, colors[currentLevel][2]);
+        myStepper.step(stepsPerBlink);
+        
+        analogWrite(R_PIN, 0);
+        analogWrite(G_PIN, 0);
+        analogWrite(B_PIN, 0);
+        myStepper.step(stepsPerBlink);
+      
+        blinks++;
+      }
+    }
+  }
+
+  // remember the state of things so we can detect changes next loop
+  wasOn = on;
+  prevLevel = currentLevel;
+  
+}
+
